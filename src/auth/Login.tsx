@@ -107,7 +107,7 @@ const LoginPage = () => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-white/50 text-xs">Sistema seguro e protegido</p>
+          <p className="text-white/50 text-xs">Sistema seguro e protegido!</p>
           <div className="flex items-center justify-center mt-2 space-x-1">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
             <span className="text-white/60 text-xs">Online</span>
