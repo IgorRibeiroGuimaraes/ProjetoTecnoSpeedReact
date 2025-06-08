@@ -1,8 +1,18 @@
 import React, { useState } from 'react';
+import { login } from '../services/api';
+
+const handleLogin = async (cnpj: string, senha: string) => {
+  try {
+    const response = await login(cnpj, senha);
+    console.log('Login successful:', response);
+  } catch (error) {
+    console.error('Login failed:', error);
+  }
+};
 
 const LoginPage = () => {
   const [cnpj, setCnpj] = useState('');
-  const [token, setToken] = useState('');
+  const [senha, setSenha] = useState('');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#216AAC] via-blue-600 to-blue-800 flex items-center justify-center p-4">
@@ -78,8 +88,8 @@ const LoginPage = () => {
               <div className="relative">
                 <input
                   type="password"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
+                  value={senha}
+                  onChange={(e) => setSenha(e.target.value)}
                   className="w-full px-4 py-4 bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-300"
                   placeholder="Digite seu token"
                 />
@@ -90,12 +100,12 @@ const LoginPage = () => {
             {/* Submit Button */}
             <div className="pt-6">
               <button
-                onClick={() => console.log('Login attempt:', { cnpj, token })}
-                className="w-full relative group overflow-hidden bg-white/15 hover:bg-white/20 backdrop-blur-md text-white font-medium py-4 px-6 rounded-xl transition-all duration-300 border border-white/30 hover:border-white/50 hover:shadow-2xl hover:shadow-white/10"
+                onClick={() => handleLogin(cnpj, senha)}
+                className="w-full cursor-pointer relative group overflow-hidden bg-white/15 hover:bg-white/20 backdrop-blur-md text-white font-medium py-4 px-6 rounded-xl transition-all duration-300 border border-white/30 hover:border-white/50 hover:shadow-2xl hover:shadow-white/10"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 group-hover:animate-pulse"></div>
                 <div className="relative flex items-center justify-center">
-                  <span className="mr-2 cursor-pointer">ACESSAR</span>
+                  <span className="mr-2">ACESSAR</span>
                   <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
