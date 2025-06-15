@@ -1,26 +1,41 @@
 import React, { useState } from 'react';
-import { login } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'; // Substituí Toast por react-toastify
+import { useAuth } from '../context/AuthContext';
 
-const handleLogin = async (cnpj: string, senha: string) => {
-  try {
-    const response = await login(cnpj, senha);
-    console.log('Login successful:', response);
-  } catch (error) {
-    console.error('Login failed:', error);
-  }
-};
-
-const LoginPage = () => {
+const Login = () => {
   const [cnpj, setCnpj] = useState('');
   const [senha, setSenha] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [erroLogin, setErroLogin] = useState('');
+
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const handleLogin = async () => {
+    setLoading(true);
+    try {
+      await login(cnpj, senha);
+      toast.success('Login realizado com sucesso!');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      navigate('/');
+    } catch (error: any) {
+      console.error('Login failed:', error);
+      const errorMessage = error.response?.data?.message || 'Erro ao tentar fazer login.';
+      setErroLogin(errorMessage);
+      setTimeout(() => setErroLogin(''), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#216AAC] via-blue-600 to-blue-800 flex items-center justify-center p-4">
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/3 rounded-full blur-2xl animate-pulse" style={{animationDelay: '4s'}}></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/3 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '4s' }}></div>
       </div>
 
       {/* Geometric grid pattern */}
@@ -97,18 +112,36 @@ const LoginPage = () => {
               </div>
             </div>
 
+            {erroLogin && (
+              <div className="bg-red-500/20 text-red-200 border border-red-400/30 rounded-lg px-4 py-3 text-sm transition-opacity duration-300">
+                <p>{erroLogin}</p>
+              </div>
+            )}
+
             {/* Submit Button */}
             <div className="pt-6">
               <button
-                onClick={() => handleLogin(cnpj, senha)}
-                className="w-full cursor-pointer relative group overflow-hidden bg-white/15 hover:bg-white/20 backdrop-blur-md text-white font-medium py-4 px-6 rounded-xl transition-all duration-300 border border-white/30 hover:border-white/50 hover:shadow-2xl hover:shadow-white/10"
+                onClick={handleLogin}
+                disabled={loading}
+                className={`w-full cursor-pointer relative group overflow-hidden backdrop-blur-md text-white font-medium py-4 px-6 rounded-xl transition-all duration-300 border
+                  ${loading ? 'bg-white/10 border-white/20 cursor-not-allowed' : 'bg-white/15 hover:bg-white/20 border-white/30 hover:border-white/50 hover:shadow-2xl hover:shadow-white/10'}
+                `}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 group-hover:animate-pulse"></div>
                 <div className="relative flex items-center justify-center">
-                  <span className="mr-2">ACESSAR</span>
-                  <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  {loading ? (
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                  ) : (
+                    <>
+                      <span className="mr-2">ACESSAR</span>
+                      <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </>
+                  )}
                 </div>
               </button>
             </div>
@@ -128,4 +161,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default Login;
