@@ -1,5 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/24/solid';
+import { createCarta } from '../services/api';
+import { toast } from 'react-toastify';
+import { CustomError } from '../services/api'; // Importe o tipo CustomError
 
 interface Banco {
     BancoId: number;
@@ -8,28 +11,41 @@ interface Banco {
     Produto: any[];
 }
 
-interface FormData {
-    cnpj: string;
-    razaoSocial: string;
-    responsavelNome: string;
-    responsavelCargo: string;
-    responsavelTelefone: string;
-    responsavelEmail: string;
-    agencia: string;
-    agenciaDV: string;
-    conta: string;
-    contaDV: string;
-    convenio: string;
-    cnab: string;
-    gerenteNome: string;
-    gerenteTelefone: string;
-    gerenteEmail: string;
+interface FormDataValues {
+    emitente: {
+        cnpj: string;
+        razaoSocial: string;
+    };
+    responsavel: {
+        nome: string;
+        cargo: string;
+        telefone: string;
+        email: string;
+    };
+    banco: {
+        agencia: string;
+        agenciaDV: string;
+        conta: number; // Pode ser string no TypeScript, mas será convertido
+        contaDV: number;
+        convenio: string;
+        cnab: string; // "240", "400", "444"
+        gerente: {
+            nome: string;
+            telefone: string;
+            email: string;
+        };
+    };
+}
+
+interface ErrorField {
+    campo: string;
+    mensagem: string;
 }
 
 interface DataFormStepProps {
     selectedBankData: Banco | undefined;
-    formData: FormData; // Recebe formData do pai
-    onFormDataChange: (data: FormData) => void; // Callback para atualizar formData
+    formData: FormDataValues;
+    onFormDataChange: (data: FormDataValues) => void;
     isValid: (isValid: boolean) => void;
     onPrev: () => void;
     onNext: () => void;
@@ -43,49 +59,145 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
     onNext,
     isValid,
 }) => {
+    const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<ErrorField[]>([]);
+
+    // Mapeamento de cnab para tipoCnabId
+    const cnabToTipoCnabId: { [key: string]: number } = {
+        '240': 1,
+        '400': 2,
+        '444': 3,
+    };
+
     // Função para atualizar os campos do formulário
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+        section: keyof FormDataValues,
+        subSection?: keyof FormDataValues['responsavel'] | keyof FormDataValues['banco']['gerente'] | 'gerente'
+    ) => {
         const { name, value } = e.target;
-        onFormDataChange({
-            ...formData,
-            [name]: value,
-        });
+        if (section === 'emitente') {
+            onFormDataChange({
+                ...formData,
+                emitente: {
+                    ...formData.emitente,
+                    [name]: value,
+                },
+            });
+        } else if (section === 'responsavel') {
+            onFormDataChange({
+                ...formData,
+                responsavel: {
+                    ...formData.responsavel,
+                    [name]: value,
+                },
+            });
+        } else if (section === 'banco') {
+            if (subSection === 'gerente') {
+                onFormDataChange({
+                    ...formData,
+                    banco: {
+                        ...formData.banco,
+                        gerente: {
+                            ...formData.banco.gerente,
+                            [name]: value,
+                        },
+                    },
+                });
+            } else {
+                onFormDataChange({
+                    ...formData,
+                    banco: {
+                        ...formData.banco,
+                        [name]: value,
+                    },
+                });
+            }
+        }
     };
 
     // Função para atualizar o campo CNAB
     const handleCnabChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         onFormDataChange({
             ...formData,
-            cnab: e.target.value,
+            banco: {
+                ...formData.banco,
+                cnab: e.target.value,
+            },
         });
     };
 
-    // Função de validação
+    // Função de validação básica
     const isFormValid = () => {
         return (
-            formData.cnpj.trim() !== '' &&
-            formData.razaoSocial.trim() !== '' &&
-            formData.responsavelNome.trim() !== '' &&
-            formData.responsavelCargo.trim() !== '' &&
-            formData.responsavelTelefone.trim() !== '' &&
-            formData.responsavelEmail.trim() !== '' &&
-            formData.agencia.trim() !== '' &&
-            formData.agenciaDV.trim() !== '' &&
-            formData.conta.trim() !== '' &&
-            formData.contaDV.trim() !== '' &&
-            formData.convenio.trim() !== '' &&
-            formData.cnab.trim() !== '' &&
-            formData.gerenteNome.trim() !== '' &&
-            formData.gerenteTelefone.trim() !== '' &&
-            formData.gerenteEmail.trim() !== ''
+            formData.emitente.cnpj.trim() !== '' &&
+            formData.emitente.razaoSocial.trim() !== '' &&
+            formData.responsavel.nome.trim() !== '' &&
+            formData.responsavel.cargo.trim() !== '' &&
+            formData.responsavel.telefone.trim() !== '' &&
+            formData.responsavel.email.trim() !== '' &&
+            formData.banco.agencia.trim() !== '' &&
+            formData.banco.agenciaDV.trim() !== '' &&
+            formData.banco.conta !== null &&
+            formData.banco.contaDV !== null &&
+            formData.banco.convenio.trim() !== '' &&
+            formData.banco.cnab.trim() !== '' &&
+            formData.banco.gerente.nome.trim() !== '' &&
+            formData.banco.gerente.telefone.trim() !== '' &&
+            formData.banco.gerente.email.trim() !== '' &&
+            errors.length === 0
         );
+    };
+
+    // Função para criar a carta
+    const handleCreateCarta = async () => {
+        if (!isFormValid() || !selectedBankData) {
+            toast.error('Por favor, corrija os erros nos campos e preencha todos os dados obrigatórios.');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const dataToSend = {
+                emitente: formData.emitente,
+                responsavel: formData.responsavel,
+                banco: {
+                    bancoId: selectedBankData.BancoId,
+                    agencia: formData.banco.agencia,
+                    agenciaDV: formData.banco.agenciaDV,
+                    conta: Number(formData.banco.conta), // Garante que seja número
+                    contaDV: Number(formData.banco.contaDV), // Garante que seja número
+                    convenio: formData.banco.convenio,
+                    tipoCnabId: cnabToTipoCnabId[formData.banco.cnab] || 1,
+                    gerente: formData.banco.gerente,
+                },
+            };
+
+            await createCarta(dataToSend);
+            toast.success('Carta criada com sucesso!');
+            onNext();
+        } catch (error: CustomError | any) { // Usa CustomError como tipo possível
+            console.error('Erro ao criar carta:', error);
+            // Verifica se o erro contém os dados retornados pela API
+            if (error instanceof Error && 'campos' in error && Array.isArray(error.campos)) {
+                setErrors(error.campos); // Atualiza os erros diretamente do objeto de erro
+                console.log('Erros capturados:', error.campos);
+                error.campos.forEach((err: ErrorField) => {
+                    toast.error(`${err.mensagem} (Campo: ${err.campo})`);
+                });
+            } else {
+                toast.error(error.message || 'Erro ao criar carta. Tente novamente.');
+            }
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
         if (typeof isValid === 'function') {
             isValid(isFormValid());
         }
-    }, [formData, isValid]);
+    }, [formData, isValid, errors]);
 
     return (
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
@@ -114,19 +226,26 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                             <input
                                 type="text"
                                 name="cnpj"
-                                value={formData.cnpj}
-                                onChange={handleInputChange}
+                                value={formData.emitente.cnpj}
+                                onChange={(e) => handleInputChange(e, 'emitente')}
                                 placeholder="Inserir número do CNPJ"
-                                className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
+                                className={`w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300 ${
+                                    errors.find((err) => err.campo === 'emitente.cnpj') ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             />
+                            {errors.find((err) => err.campo === 'emitente.cnpj') && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    {errors.find((err) => err.campo === 'emitente.cnpj')?.mensagem}
+                                </p>
+                            )}
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Razão Social</label>
                             <input
                                 type="text"
                                 name="razaoSocial"
-                                value={formData.razaoSocial}
-                                onChange={handleInputChange}
+                                value={formData.emitente.razaoSocial}
+                                onChange={(e) => handleInputChange(e, 'emitente')}
                                 placeholder="Inserir a Razão Social"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -145,9 +264,9 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Nome</label>
                             <input
                                 type="text"
-                                name="responsavelNome"
-                                value={formData.responsavelNome}
-                                onChange={handleInputChange}
+                                name="nome"
+                                value={formData.responsavel.nome}
+                                onChange={(e) => handleInputChange(e, 'responsavel')}
                                 placeholder="Inserir o nome do Responsável pela Empresa"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -156,9 +275,9 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Cargo</label>
                             <input
                                 type="text"
-                                name="responsavelCargo"
-                                value={formData.responsavelCargo}
-                                onChange={handleInputChange}
+                                name="cargo"
+                                value={formData.responsavel.cargo}
+                                onChange={(e) => handleInputChange(e, 'responsavel')}
                                 placeholder="Inserir o cargo do Responsável pela Empresa"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -169,20 +288,27 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Telefone</label>
                             <input
                                 type="text"
-                                name="responsavelTelefone"
-                                value={formData.responsavelTelefone}
-                                onChange={handleInputChange}
-                                placeholder="Inserir telefone do Responsável pela Empresa"
-                                className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
+                                name="telefone"
+                                value={formData.responsavel.telefone}
+                                onChange={(e) => handleInputChange(e, 'responsavel')}
+                                placeholder="Inserir telefone do Responsável pela Empresa (ex: 99 99999-9999)"
+                                className={`w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300 ${
+                                    errors.find((err) => err.campo === 'responsavel.telefone') ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             />
+                            {errors.find((err) => err.campo === 'responsavel.telefone') && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    {errors.find((err) => err.campo === 'responsavel.telefone')?.mensagem}
+                                </p>
+                            )}
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">E-mail</label>
                             <input
                                 type="email"
-                                name="responsavelEmail"
-                                value={formData.responsavelEmail}
-                                onChange={handleInputChange}
+                                name="email"
+                                value={formData.responsavel.email}
+                                onChange={(e) => handleInputChange(e, 'responsavel')}
                                 placeholder="Inserir e-mail do Responsável pela Empresa"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -209,10 +335,10 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                         <div className="col-span-5">
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Agência</label>
                             <input
-                                type="text"
+                                type="number"
                                 name="agencia"
-                                value={formData.agencia}
-                                onChange={handleInputChange}
+                                value={formData.banco.agencia}
+                                onChange={(e) => handleInputChange(e, 'banco')}
                                 placeholder="Inserir número da Agência"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -220,10 +346,10 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">DV</label>
                             <input
-                                type="text"
+                                type="number"
                                 name="agenciaDV"
-                                value={formData.agenciaDV}
-                                onChange={handleInputChange}
+                                value={formData.banco.agenciaDV}
+                                onChange={(e) => handleInputChange(e, 'banco')}
                                 placeholder="DV"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -233,10 +359,10 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                         <div className="col-span-5">
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Conta</label>
                             <input
-                                type="text"
+                                type="number"
                                 name="conta"
-                                value={formData.conta}
-                                onChange={handleInputChange}
+                                value={formData.banco.conta}
+                                onChange={(e) => handleInputChange(e, 'banco')}
                                 placeholder="Inserir número da Conta"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -244,10 +370,10 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">DV</label>
                             <input
-                                type="text"
+                                type="number"
                                 name="contaDV"
-                                value={formData.contaDV}
-                                onChange={handleInputChange}
+                                value={formData.banco.contaDV}
+                                onChange={(e) => handleInputChange(e, 'banco')}
                                 placeholder="DV"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -259,8 +385,8 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                             <input
                                 type="text"
                                 name="convenio"
-                                value={formData.convenio}
-                                onChange={handleInputChange}
+                                value={formData.banco.convenio}
+                                onChange={(e) => handleInputChange(e, 'banco')}
                                 placeholder="Inserir o número do Convênio"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -274,7 +400,7 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                                         id="cnab240"
                                         name="cnab"
                                         value="240"
-                                        checked={formData.cnab === '240'}
+                                        checked={formData.banco.cnab === '240'}
                                         onChange={handleCnabChange}
                                         className="mr-3 w-4 h-4 text-[#0d7ac9] focus:ring-[#0d7ac9]"
                                     />
@@ -286,7 +412,7 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                                         id="cnab400"
                                         name="cnab"
                                         value="400"
-                                        checked={formData.cnab === '400'}
+                                        checked={formData.banco.cnab === '400'}
                                         onChange={handleCnabChange}
                                         className="mr-3 w-4 h-4 text-[#0d7ac9] focus:ring-[#0d7ac9]"
                                     />
@@ -298,7 +424,7 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                                         id="cnab444"
                                         name="cnab"
                                         value="444"
-                                        checked={formData.cnab === '444'}
+                                        checked={formData.banco.cnab === '444'}
                                         onChange={handleCnabChange}
                                         className="mr-3 w-4 h-4 text-[#0d7ac9] focus:ring-[#0d7ac9]"
                                     />
@@ -320,9 +446,9 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Nome</label>
                             <input
                                 type="text"
-                                name="gerenteNome"
-                                value={formData.gerenteNome}
-                                onChange={handleInputChange}
+                                name="nome"
+                                value={formData.banco.gerente.nome}
+                                onChange={(e) => handleInputChange(e, 'banco', 'gerente')}
                                 placeholder="Inserir o nome do Gerente de Conta"
                                 className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                             />
@@ -331,21 +457,28 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Telefone</label>
                             <input
                                 type="text"
-                                name="gerenteTelefone"
-                                value={formData.gerenteTelefone}
-                                onChange={handleInputChange}
-                                placeholder="Inserir o número de telefone do Gerente de Conta"
-                                className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
+                                name="telefone"
+                                value={formData.banco.gerente.telefone}
+                                onChange={(e) => handleInputChange(e, 'banco', 'gerente')}
+                                placeholder="Inserir o número de telefone do Gerente de Conta (ex: 99 99999-9999)"
+                                className={`w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300 ${
+                                    errors.find((err) => err.campo === 'banco.gerente.telefone') ? 'border-red-500' : 'border-gray-300'
+                                }`}
                             />
+                            {errors.find((err) => err.campo === 'banco.gerente.telefone') && (
+                                <p className="text-red-500 text-sm mt-1">
+                                    {errors.find((err) => err.campo === 'banco.gerente.telefone')?.mensagem}
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">E-mail</label>
                         <input
                             type="email"
-                            name="gerenteEmail"
-                            value={formData.gerenteEmail}
-                            onChange={handleInputChange}
+                            name="email"
+                            value={formData.banco.gerente.email}
+                            onChange={(e) => handleInputChange(e, 'banco', 'gerente')}
                             placeholder="Inserir o e-mail do Gerente de Conta"
                             className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300"
                         />
@@ -362,14 +495,14 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                 </button>
                 <button
                     className={`cursor-pointer px-8 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center ${
-                        selectedBankData && isFormValid()
+                        selectedBankData && isFormValid() && !loading
                             ? 'bg-gradient-to-r from-[#0d7ac9] to-[#0a6ab0] hover:from-[#0a6ab0] hover:to-[#0d7ac9] text-white shadow-lg hover:shadow-xl transform hover:scale-105'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
-                    onClick={onNext}
-                    disabled={!selectedBankData || !isFormValid()}
+                    onClick={handleCreateCarta}
+                    disabled={!selectedBankData || !isFormValid() || loading}
                 >
-                    Próximo <ChevronRightIcon className="w-5 h-5 ml-2" />
+                    {loading ? 'Enviando...' : 'Criar Carta'} <ChevronRightIcon className="w-5 h-5 ml-2" />
                 </button>
             </div>
         </div>

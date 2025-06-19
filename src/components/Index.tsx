@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { fetchBanco } from '../services/api';
 import StepHeader from './StepHeader';
 import ProgressSidebar from './ProgressSidebar';
@@ -34,22 +34,30 @@ interface TipoCarta {
     description: string;
 }
 
-interface FormData {
-    cnpj: string;
-    razaoSocial: string;
-    responsavelNome: string;
-    responsavelCargo: string;
-    responsavelTelefone: string;
-    responsavelEmail: string;
-    agencia: string;
-    agenciaDV: string;
-    conta: string;
-    contaDV: string;
-    convenio: string;
-    cnab: string;
-    gerenteNome: string;
-    gerenteTelefone: string;
-    gerenteEmail: string;
+interface FormDataValues {
+    emitente: {
+        cnpj: string;
+        razaoSocial: string;
+    };
+    responsavel: {
+        nome: string;
+        cargo: string;
+        telefone: string;
+        email: string;
+    };
+    banco: {
+        agencia: string;
+        agenciaDV: string;
+        conta: number; // Consistente com DataFormStep
+        contaDV: number; // Consistente com DataFormStep
+        convenio: string;
+        cnab: string;
+        gerente: {
+            nome: string;
+            telefone: string;
+            email: string;
+        };
+    };
 }
 
 const HomePage = () => {
@@ -61,25 +69,32 @@ const HomePage = () => {
     const [error, setError] = useState<string | null>(null);
     const [bancos, setBancos] = useState<Banco[]>([]);
     const [isDataFormValid, setIsDataFormValid] = useState(false);
-    const [formData, setFormData] = useState<FormData>({
-        cnpj: '',
-        razaoSocial: '',
-        responsavelNome: '',
-        responsavelCargo: '',
-        responsavelTelefone: '',
-        responsavelEmail: '',
-        agencia: '',
-        agenciaDV: '',
-        conta: '',
-        contaDV: '',
-        convenio: '',
-        cnab: '',
-        gerenteNome: '',
-        gerenteTelefone: '',
-        gerenteEmail: '',
+    const [formData, setFormData] = useState<FormDataValues>({
+        emitente: {
+            cnpj: '',
+            razaoSocial: '',
+        },
+        responsavel: {
+            nome: '',
+            cargo: '',
+            telefone: '',
+            email: '',
+        },
+        banco: {
+            agencia: '',
+            agenciaDV: '',
+            conta: 0,
+            contaDV: 0,
+            convenio: '',
+            cnab: '',
+            gerente: {
+                nome: '',
+                telefone: '',
+                email: '',
+            },
+        },
     });
 
-    // Lista estática de todos os produtos possíveis
     const todosProdutos: Produto[] = [
         { id: 1, label: 'Boletos', description: 'Trafegar arquivos de remessa e retorno de Boletos' },
         { id: 2, label: 'Pagamentos', description: 'Trafegar arquivos de remessa e retorno de pagamentos' },
@@ -91,7 +106,7 @@ const HomePage = () => {
         { id: 1, title: 'Selecione um Banco', subtitle: 'Instituição Bancária' },
         { id: 2, title: 'Selecione um Produto', subtitle: 'Produtos desejados' },
         { id: 3, title: 'Preencher Dados', subtitle: 'Empresa e conta' },
-        { id: 4, title: 'Tipo de Carta', subtitle: 'Configuração de carta' },
+        { id: 4, title: 'Tipo de Serviço', subtitle: 'Serviços Parceiros' },
         { id: 5, title: 'Carta', subtitle: 'Visualização da carta gerada' },
     ];
 
@@ -102,7 +117,6 @@ const HomePage = () => {
 
     const selectedBankData = bancos.find((banco) => banco.BancoId.toString() === selectedBank);
 
-    // Combina produtos disponíveis com a lista estática
     const produtos: Produto[] = todosProdutos.map((produto) => {
         const produtoBanco = selectedBankData?.Produto.find((p) => p.id === produto.id);
         return {
@@ -126,7 +140,7 @@ const HomePage = () => {
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         handleFetchBanco();
     }, []);
 
@@ -139,45 +153,34 @@ const HomePage = () => {
     const prevStep = () => {
         if (activeStep > 1) {
             if (activeStep === 3) {
-                // Limpar formData e isDataFormValid ao voltar da etapa 3 para a 2
                 setFormData({
-                    cnpj: '',
-                    razaoSocial: '',
-                    responsavelNome: '',
-                    responsavelCargo: '',
-                    responsavelTelefone: '',
-                    responsavelEmail: '',
-                    agencia: '',
-                    agenciaDV: '',
-                    conta: '',
-                    contaDV: '',
-                    convenio: '',
-                    cnab: '',
-                    gerenteNome: '',
-                    gerenteTelefone: '',
-                    gerenteEmail: '',
+                    emitente: { cnpj: '', razaoSocial: '' },
+                    responsavel: { nome: '', cargo: '', telefone: '', email: '' },
+                    banco: {
+                        agencia: '',
+                        agenciaDV: '',
+                        conta: 0,
+                        contaDV: 0,
+                        convenio: '',
+                        cnab: '',
+                        gerente: { nome: '', telefone: '', email: '' },
+                    },
                 });
                 setIsDataFormValid(false);
-                setSelectedProduct(''); // Também limpa o produto selecionado
+                setSelectedProduct('');
             } else if (activeStep === 4) {
-                setSelectedLetterType(''); // Limpa o tipo de carta ao voltar da etapa 4
+                setSelectedLetterType('');
             }
             setActiveStep(activeStep - 1);
         }
     };
 
     const goToStep = (step: number) => {
-        if (step === 1) {
-            setActiveStep(1);
-        } else if (step === 2 && selectedBank) {
-            setActiveStep(2);
-        } else if (step === 3 && selectedBank && selectedProduct && isDataFormValid) {
-            setActiveStep(3);
-        } else if (step === 4 && selectedBank && selectedProduct && isDataFormValid) {
-            setActiveStep(4);
-        } else if (step === 5 && selectedBank && selectedProduct && isDataFormValid && selectedLetterType) {
-            setActiveStep(5);
-        }
+        if (step === 1) setActiveStep(1);
+        else if (step === 2 && selectedBank) setActiveStep(2);
+        else if (step === 3 && selectedBank && selectedProduct && isDataFormValid) setActiveStep(3);
+        else if (step === 4 && selectedBank && selectedProduct && isDataFormValid) setActiveStep(4);
+        else if (step === 5 && selectedBank && selectedProduct && isDataFormValid && selectedLetterType) setActiveStep(5);
     };
 
     const isStepComplete = (step: number) => {
@@ -207,13 +210,12 @@ const HomePage = () => {
         setSelectedLetterType(letterTypeId);
     };
 
-    const handleFormDataChange = (data: FormData) => {
+    const handleFormDataChange = (data: FormDataValues) => {
         setFormData(data);
     };
 
     return (
         <div className="bg-gray-50">
-            {/* Header com timeline */}
             <StepHeader
                 steps={steps}
                 activeStep={activeStep}
@@ -222,9 +224,7 @@ const HomePage = () => {
                 isStepComplete={isStepComplete}
                 goToStep={goToStep}
             />
-
             <div className="flex mx-auto">
-                {/* Sidebar */}
                 <ProgressSidebar
                     steps={steps}
                     activeStep={activeStep}
@@ -235,8 +235,6 @@ const HomePage = () => {
                     isStepComplete={isStepComplete}
                     goToStep={goToStep}
                 />
-
-                {/* Conteúdo principal */}
                 <div className="flex-1 ml-1">
                     {activeStep === 1 && (
                         <BankSelectionStep
@@ -247,7 +245,6 @@ const HomePage = () => {
                             onNext={nextStep}
                         />
                     )}
-
                     {activeStep === 2 && (
                         <ProductSelectionStep
                             produtos={produtos}
@@ -257,7 +254,6 @@ const HomePage = () => {
                             onPrev={prevStep}
                         />
                     )}
-
                     {activeStep === 3 && (
                         <DataFormStep
                             selectedBankData={selectedBankData}
@@ -268,7 +264,6 @@ const HomePage = () => {
                             onNext={nextStep}
                         />
                     )}
-
                     {activeStep === 4 && (
                         <LetterType
                             tiposCarta={tiposCarta}
@@ -278,7 +273,6 @@ const HomePage = () => {
                             onPrev={prevStep}
                         />
                     )}
-
                     {activeStep === 5 && (
                         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
                             <h1 className="text-3xl font-bold text-gray-800 mb-2">Visualização da Carta</h1>

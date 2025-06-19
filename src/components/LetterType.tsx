@@ -29,9 +29,9 @@ const LetterType: React.FC<LetterTypeProps> = ({
                     <span className="text-white font-bold text-xl">4</span>
                 </div>
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Selecionar Tipo de Carta</h1>
+                    <h1 className="text-3xl font-bold text-gray-800 mb-2">Selecionar Tipo de Serviço</h1>
                     <p className="text-gray-600 text-lg">
-                        Selecione o tipo de carta que deseja utilizar para a transferência de arquivos por VAN
+                        Selecione o tipo de serviço que deseja utilizar para a transferência de arquivos por VAN
                     </p>
                 </div>
             </div>
