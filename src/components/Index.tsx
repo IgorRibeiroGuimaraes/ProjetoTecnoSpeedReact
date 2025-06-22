@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { fetchBanco } from '../services/api';
+import { fetchBanco, fetchServicos } from '../services/api';
+import { Toast } from '../lib/toast';
 import StepHeader from './StepHeader';
 import ProgressSidebar from './ProgressSidebar';
 import BankSelectionStep from './BankSelectionStep';
 import ProductSelectionStep from './ProductSelectionStep';
 import DataFormStep from './DataFormStep';
 import LetterType from './LetterType';
+import PdfView from './PdfView';
 
 // Interfaces
 interface Banco {
@@ -30,7 +32,7 @@ interface Step {
 
 interface TipoCarta {
     id: number;
-    label: string;
+    nome: string;
     description: string;
 }
 
@@ -68,7 +70,10 @@ const HomePage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [bancos, setBancos] = useState<Banco[]>([]);
+    const [servicos, setServicos] = useState<any[]>([]);
     const [isDataFormValid, setIsDataFormValid] = useState(false);
+    const [cartaId, setCartaId] = useState<number>(0);
+    const [pdfUrl, setPdfUrl] = useState<string>('');
     const [formData, setFormData] = useState<FormDataValues>({
         emitente: {
             cnpj: '',
@@ -110,11 +115,6 @@ const HomePage = () => {
         { id: 5, title: 'Carta', subtitle: 'Visualização da carta gerada' },
     ];
 
-    const tiposCarta: TipoCarta[] = [
-        { id: 1, label: 'Nextera', description: 'Arquivo de remessa para o banco' },
-        { id: 2, label: 'Finnet', description: 'Arquivo de retorno do banco' },
-    ];
-
     const selectedBankData = bancos.find((banco) => banco.BancoId.toString() === selectedBank);
 
     const produtos: Produto[] = todosProdutos.map((produto) => {
@@ -134,14 +134,30 @@ const HomePage = () => {
             setBancos(bancosData);
         } catch (error) {
             console.error('Error fetching data:', error);
-            setError('Falha ao carregar os bancos. Tente novamente.');
+            Toast.error('Falha ao carregar os bancos. Tente novamente.');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleFetchServicos = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const servicosData = await fetchServicos();
+            console.log('Serviços fetched:', servicosData);
+            setServicos(servicosData);
+        } catch (error) {
+            console.error('Erro para atualizar serviços:', error);
+            Toast.error('Falha ao carregar os serviços. Tente novamente.');
+        } finally {
+            setLoading(false);
+        }
+    }
+
     useEffect(() => {
         handleFetchBanco();
+        handleFetchServicos();
     }, []);
 
     const nextStep = () => {
@@ -262,30 +278,28 @@ const HomePage = () => {
                             isValid={setIsDataFormValid}
                             onPrev={prevStep}
                             onNext={nextStep}
+                            selectedProduct={selectedProduct}
+                            setCartaId={setCartaId}
                         />
                     )}
                     {activeStep === 4 && (
                         <LetterType
-                            tiposCarta={tiposCarta}
+                            servicos={servicos}
                             selectedLetterType={selectedLetterType}
                             onLetterTypeSelect={handleLetterTypeSelect}
                             onNext={nextStep}
                             onPrev={prevStep}
+                            cartaId={cartaId}
+                            setPdfUrl={setPdfUrl}
                         />
                     )}
                     {activeStep === 5 && (
-                        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                            <h1 className="text-3xl font-bold text-gray-800 mb-2">Visualização da Carta</h1>
-                            <p className="text-gray-600 text-lg mb-8">Placeholder para a visualização da carta gerada.</p>
-                            <div className="flex justify-between">
-                                <button
-                                    className="cursor-pointer px-8 py-4 border-2 border-[#0d7ac9] text-[#0d7ac9] rounded-xl font-semibold hover:bg-[#0d7ac9] hover:text-white transition-all duration-300"
-                                    onClick={prevStep}
-                                >
-                                    Voltar
-                                </button>
-                            </div>
-                        </div>
+                        <PdfView
+                            onLetterTypeSelect={handleLetterTypeSelect}
+                            onNext={nextStep}
+                            onPrev={prevStep}
+                            pdfUrl={pdfUrl}
+                        />
                     )}
                 </div>
             </div>

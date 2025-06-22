@@ -2,9 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
 import Index from './components/Index';
 import Login from './auth/Login';
+import Navbar from './components/Navbar'; 
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -16,11 +16,7 @@ function AppContent() {
 
   return (
     <>
-      {shouldShowHeader && (
-        <header className="bg-[#0d58c9] text-white p-4">
-          <img src="/assets/images/Logo.png" alt="Logo" className="h-12" />
-        </header>
-      )}
+      {shouldShowHeader && <Navbar />}
 
       <Routes>
         <Route path="/login" element={<Login />} />

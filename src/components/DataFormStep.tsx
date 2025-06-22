@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/24/solid';
 import { createCarta } from '../services/api';
 import { toast } from 'react-toastify';
-import { CustomError } from '../services/api'; // Importe o tipo CustomError
+import { CustomError } from '../services/api';
+import { IMaskInput } from 'react-imask';
 
 interface Banco {
     BancoId: number;
@@ -25,10 +26,10 @@ interface FormDataValues {
     banco: {
         agencia: string;
         agenciaDV: string;
-        conta: number; // Pode ser string no TypeScript, mas será convertido
+        conta: number;
         contaDV: number;
         convenio: string;
-        cnab: string; // "240", "400", "444"
+        cnab: string;
         gerente: {
             nome: string;
             telefone: string;
@@ -49,6 +50,8 @@ interface DataFormStepProps {
     isValid: (isValid: boolean) => void;
     onPrev: () => void;
     onNext: () => void;
+    selectedProduct: string;
+    setCartaId: (id: number) => void;
 }
 
 const DataFormStep: React.FC<DataFormStepProps> = ({
@@ -58,18 +61,18 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
     onPrev,
     onNext,
     isValid,
+    selectedProduct,
+    setCartaId,
 }) => {
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<ErrorField[]>([]);
 
-    // Mapeamento de cnab para tipoCnabId
     const cnabToTipoCnabId: { [key: string]: number } = {
         '240': 1,
         '400': 2,
         '444': 3,
     };
 
-    // Função para atualizar os campos do formulário
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement>,
         section: keyof FormDataValues,
@@ -116,7 +119,6 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
         }
     };
 
-    // Função para atualizar o campo CNAB
     const handleCnabChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         onFormDataChange({
             ...formData,
@@ -127,7 +129,43 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
         });
     };
 
-    // Função de validação básica
+    // Função para lidar com mudanças nas máscaras
+    const handleMaskChange = (
+        value: string,
+        section: keyof FormDataValues,
+        field: string,
+        subSection?: 'gerente'
+    ) => {
+        if (section === 'emitente') {
+            onFormDataChange({
+                ...formData,
+                emitente: {
+                    ...formData.emitente,
+                    [field]: value,
+                },
+            });
+        } else if (section === 'responsavel') {
+            onFormDataChange({
+                ...formData,
+                responsavel: {
+                    ...formData.responsavel,
+                    [field]: value,
+                },
+            });
+        } else if (section === 'banco' && subSection === 'gerente') {
+            onFormDataChange({
+                ...formData,
+                banco: {
+                    ...formData.banco,
+                    gerente: {
+                        ...formData.banco.gerente,
+                        [field]: value,
+                    },
+                },
+            });
+        }
+    };
+
     const isFormValid = () => {
         return (
             formData.emitente.cnpj.trim() !== '' &&
@@ -149,7 +187,6 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
         );
     };
 
-    // Função para criar a carta
     const handleCreateCarta = async () => {
         if (!isFormValid() || !selectedBankData) {
             toast.error('Por favor, corrija os erros nos campos e preencha todos os dados obrigatórios.');
@@ -165,22 +202,27 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                     bancoId: selectedBankData.BancoId,
                     agencia: formData.banco.agencia,
                     agenciaDV: formData.banco.agenciaDV,
-                    conta: Number(formData.banco.conta), // Garante que seja número
-                    contaDV: Number(formData.banco.contaDV), // Garante que seja número
+                    conta: Number(formData.banco.conta),
+                    contaDV: Number(formData.banco.contaDV),
                     convenio: formData.banco.convenio,
                     tipoCnabId: cnabToTipoCnabId[formData.banco.cnab] || 1,
                     gerente: formData.banco.gerente,
                 },
+                produtoId: selectedProduct,
             };
 
-            await createCarta(dataToSend);
+            const response = await createCarta(dataToSend);
+
+            console.log(response);
+
+            setCartaId(response.id);
+
             toast.success('Carta criada com sucesso!');
             onNext();
-        } catch (error: CustomError | any) { // Usa CustomError como tipo possível
+        } catch (error: CustomError | any) {
             console.error('Erro ao criar carta:', error);
-            // Verifica se o erro contém os dados retornados pela API
             if (error instanceof Error && 'campos' in error && Array.isArray(error.campos)) {
-                setErrors(error.campos); // Atualiza os erros diretamente do objeto de erro
+                setErrors(error.campos);
                 console.log('Erros capturados:', error.campos);
                 error.campos.forEach((err: ErrorField) => {
                     toast.error(`${err.mensagem} (Campo: ${err.campo})`);
@@ -223,12 +265,11 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">CNPJ</label>
-                            <input
-                                type="text"
-                                name="cnpj"
+                            <IMaskInput
+                                mask="00.000.000/0000-00"
                                 value={formData.emitente.cnpj}
-                                onChange={(e) => handleInputChange(e, 'emitente')}
-                                placeholder="Inserir número do CNPJ"
+                                onAccept={(value) => handleMaskChange(value, 'emitente', 'cnpj')}
+                                placeholder="99.999.999/9999-99"
                                 className={`w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300 ${
                                     errors.find((err) => err.campo === 'emitente.cnpj') ? 'border-red-500' : 'border-gray-300'
                                 }`}
@@ -286,12 +327,14 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Telefone</label>
-                            <input
-                                type="text"
-                                name="telefone"
+                            <IMaskInput
+                                 mask={[
+                                    { mask: '(00) 0000-0000' },
+                                    { mask: '(00) 00000-0000' }
+                                  ]}
                                 value={formData.responsavel.telefone}
-                                onChange={(e) => handleInputChange(e, 'responsavel')}
-                                placeholder="Inserir telefone do Responsável pela Empresa (ex: 99 99999-9999)"
+                                onAccept={(value) => handleMaskChange(value, 'responsavel', 'telefone')}
+                                placeholder="(99) 99999-9999"
                                 className={`w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300 ${
                                     errors.find((err) => err.campo === 'responsavel.telefone') ? 'border-red-500' : 'border-gray-300'
                                 }`}
@@ -394,42 +437,26 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">CNAB</label>
                             <div className="flex items-center space-x-8 mt-4">
-                                <div className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        id="cnab240"
-                                        name="cnab"
-                                        value="240"
-                                        checked={formData.banco.cnab === '240'}
-                                        onChange={handleCnabChange}
-                                        className="mr-3 w-4 h-4 text-[#0d7ac9] focus:ring-[#0d7ac9]"
-                                    />
-                                    <label htmlFor="cnab240" className="text-sm font-medium">240</label>
-                                </div>
-                                <div className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        id="cnab400"
-                                        name="cnab"
-                                        value="400"
-                                        checked={formData.banco.cnab === '400'}
-                                        onChange={handleCnabChange}
-                                        className="mr-3 w-4 h-4 text-[#0d7ac9] focus:ring-[#0d7ac9]"
-                                    />
-                                    <label htmlFor="cnab400" className="text-sm font-medium">400</label>
-                                </div>
-                                <div className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        id="cnab444"
-                                        name="cnab"
-                                        value="444"
-                                        checked={formData.banco.cnab === '444'}
-                                        onChange={handleCnabChange}
-                                        className="mr-3 w-4 h-4 text-[#0d7ac9] focus:ring-[#0d7ac9]"
-                                    />
-                                    <label htmlFor="cnab444" className="text-sm font-medium">444</label>
-                                </div>
+                                {['240', '400', '444'].map((cnabValue) => {
+                                    const isCnabAvailable = selectedBankData?.Cnab.some((cnab) => cnab.Tipo === cnabValue);
+                                    return (
+                                        <div className="flex items-center" key={cnabValue}>
+                                            <input
+                                                type="radio"
+                                                id={`cnab${cnabValue}`}
+                                                name="cnab"
+                                                value={cnabValue}
+                                                checked={formData.banco.cnab === cnabValue}
+                                                onChange={handleCnabChange}
+                                                className="mr-3 w-4 h-4 text-[#0d7ac9] focus:ring-[#0d7ac9]"
+                                                disabled={!isCnabAvailable}
+                                            />
+                                            <label htmlFor={`cnab${cnabValue}`} className="text-sm font-medium">
+                                                {cnabValue}
+                                            </label>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -455,12 +482,14 @@ const DataFormStep: React.FC<DataFormStepProps> = ({
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">Telefone</label>
-                            <input
-                                type="text"
-                                name="telefone"
+                            <IMaskInput
+                                 mask={[
+                                    { mask: '(00) 0000-0000' },
+                                    { mask: '(00) 00000-0000' }
+                                  ]}
                                 value={formData.banco.gerente.telefone}
-                                onChange={(e) => handleInputChange(e, 'banco', 'gerente')}
-                                placeholder="Inserir o número de telefone do Gerente de Conta (ex: 99 99999-9999)"
+                                onAccept={(value) => handleMaskChange(value, 'banco', 'telefone', 'gerente')}
+                                placeholder="(99) 99999-9999"
                                 className={`w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-[#0d7ac9]/20 focus:border-[#0d7ac9] transition-all duration-300 ${
                                     errors.find((err) => err.campo === 'banco.gerente.telefone') ? 'border-red-500' : 'border-gray-300'
                                 }`}

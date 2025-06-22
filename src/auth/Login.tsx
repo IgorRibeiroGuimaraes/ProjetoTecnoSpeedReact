@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify'; // Substituí Toast por react-toastify
 import { useAuth } from '../context/AuthContext';
+import { IMaskInput } from 'react-imask';
 
 const Login = () => {
   const [cnpj, setCnpj] = useState('');
@@ -15,7 +16,8 @@ const Login = () => {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      await login(cnpj, senha);
+      const cnpjSemMascara = cnpj.replace(/[^\d]/g, '');
+      await login(cnpjSemMascara, senha);
       toast.success('Login realizado com sucesso!');
       await new Promise(resolve => setTimeout(resolve, 1000));
       navigate('/');
@@ -81,10 +83,10 @@ const Login = () => {
                 CNPJ da Empresa
               </label>
               <div className="relative">
-                <input
-                  type="text"
+                <IMaskInput
+                  mask="00.000.000/0000-00"
                   value={cnpj}
-                  onChange={(e) => setCnpj(e.target.value)}
+                  onAccept={(value: any) => setCnpj(value)}
                   className="w-full px-4 py-4 bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-300"
                   placeholder="00.000.000/0000-00"
                 />

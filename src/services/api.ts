@@ -6,6 +6,7 @@ interface CustomError extends Error {
 }
 
 export async function login(cnpj: string, senha: string) {
+    console.log('Attempting to login with CNPJ:', cnpj);
     const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
@@ -24,11 +25,26 @@ export async function login(cnpj: string, senha: string) {
     return response.json();
 }
 
+export async function logout() {
+    const response = await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include', // Inclui cookies na requisição
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        const message = 'Erro ao deslogar. Tente novamente.';
+        throw new Error(message);
+    }
+    return response.json();
+}
+
 export async function checkAuth() {
     const response = await fetch(`${API_URL}/auth/protected`, {
         method: 'GET',
         credentials: 'include',
     });
+
+    console.log('Verificando autenticação...', response);
 
     if (!response.ok) {
         if (response.status === 401) {
@@ -51,22 +67,30 @@ export async function checkAuth() {
     };
 }
 
-export async function logout() {
-    const response = await fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include', // Inclui cookies na requisição
-    });
-    if (!response.ok) {
-        const errorData = await response.json();
-        const message = 'Erro ao deslogar. Tente novamente.';
-        throw new Error(message);
-    }
-    return response.json();
-}
-
 export async function fetchBanco(endpoint: string): Promise<any> {
     try {
-        const response = await fetch(`${API_URL}/bancos-configuracoes`);
+        const response = await fetch(`${API_URL}/bancos-configuracoes`, {
+            method: 'GET',
+            credentials: 'include',
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        console.log(response)
+        return await response.json();
+    } catch (error) {
+        console.error('Fetch error:', error);
+        throw error;
+    }
+}
+
+export async function fetchServicos(): Promise<any> {
+    try {
+        const response = await fetch(`${API_URL}/servicos`, {
+            method: 'GET',
+            credentials: 'include',
+        });
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -90,15 +114,36 @@ export async function createCarta(data: {
         tipoCnabId: number;
         gerente: { nome: string; telefone: string; email: string };
     };
+    produtoId: number;
 }): Promise<any> {
-    console.log('Creating Carta with data:', data);
+    // Limpa os campos antes do envio
+    const payload = {
+        ...data,
+        emitente: {
+            ...data.emitente,
+            cnpj: limparMascara(data.emitente.cnpj),
+        },
+        responsavel: {
+            ...data.responsavel,
+            telefone: limparMascara(data.responsavel.telefone),
+        },
+        banco: {
+            ...data.banco,
+            gerente: {
+                ...data.banco.gerente,
+                telefone: limparMascara(data.banco.gerente.telefone),
+            },
+        },
+    };
+    console.log('Creating Carta with data:', payload);
+
     try {
         const response = await fetch(`${API_URL}/carta-van`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(data),
+            body: JSON.stringify(payload),
             credentials: 'include',
         });
 
@@ -107,13 +152,45 @@ export async function createCarta(data: {
             const errorData = await response.json();
             console.log('Erro do backend:', errorData);
             const error = new Error(errorData.message || 'Erro ao criar carta.') as CustomError;
-            error.campos = errorData.campos; // Adiciona os campos de erro ao objeto de erro
+            error.campos = errorData.campos;
             throw error;
         }
 
         return await response.json();
     } catch (error) {
         console.error('Create Carta error:', error);
+        throw error;
+    }
+}
+
+function limparMascara(valor: string): string {
+    return valor.replace(/[^\d]/g, '');
+}
+
+export async function generatePdf(cartaId: number, servicoId: string): Promise<any> {
+    try {
+        console.log('Gerando PDF para a carta com ID:', cartaId, 'e serviço ID:', servicoId);
+        const data = {
+            cartaId: cartaId,
+            servicoId: Number(servicoId), // Certifique-se de que o servicoId é um número
+        };
+
+        const response = await fetch(`${API_URL}/cartas/generatepdf`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erro ao gerar PDF. Status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Generate PDF error:', error);
         throw error;
     }
 }

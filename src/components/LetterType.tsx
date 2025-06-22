@@ -1,27 +1,51 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/24/solid';
+import { generatePdf } from '../services/api';
+import { Toast } from '../lib/toast';
 
 interface TipoCarta {
     id: number;
-    label: string;
+    nome: string;
     description: string;
 }
 
 interface LetterTypeProps {
-    tiposCarta: TipoCarta[];
+    servicos: TipoCarta[];
     selectedLetterType: string;
     onLetterTypeSelect: (letterTypeId: string) => void;
     onNext: () => void;
     onPrev: () => void;
+    cartaId: number;
+    setPdfUrl: (url: string) => void;
 }
 
 const LetterType: React.FC<LetterTypeProps> = ({
-    tiposCarta,
+    servicos,
     selectedLetterType,
     onLetterTypeSelect,
     onNext,
     onPrev,
+    cartaId,
+    setPdfUrl,
 }) => {
+    const [loading, setLoading] = useState(false);
+
+    const handleNext = async () => {
+        if (selectedLetterType) {
+            setLoading(true);
+            try {
+                const response = await generatePdf(cartaId, selectedLetterType);
+                setPdfUrl(response.pdfUrl);
+                Toast.success('PDF gerado com sucesso!');
+                onNext();
+            } catch (error) {
+                console.error('Erro ao gerar PDF:', error);
+                Toast.error('Erro ao gerar PDF. Por favor, tente novamente.');
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
     return (
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <div className="flex items-center mb-8">
@@ -37,18 +61,18 @@ const LetterType: React.FC<LetterTypeProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-9 mb-8">
-                {tiposCarta.map((tipoCarta) => (
+                {servicos.map((servicos) => (
                     <button
-                        key={tipoCarta.id}
+                        key={servicos.id}
                         className={`p-6 rounded-2xl border-2 transition-all duration-300 text-left ${
-                            selectedLetterType === tipoCarta.id.toString()
+                            selectedLetterType === servicos.id.toString()
                                 ? 'border-[#0d7ac9] bg-gradient-to-br from-[#0d7ac9] to-[#0a6ab0] text-white shadow-xl transform scale-105'
                                 : 'border-gray-200 bg-white hover:border-[#0d7ac9] hover:shadow-md cursor-pointer'
                         }`}
-                        onClick={() => onLetterTypeSelect(tipoCarta.id.toString())}
+                        onClick={() => onLetterTypeSelect(servicos.id.toString())}
                     >
-                        <h3 className="font-bold text-xl mb-3">{tipoCarta.label}</h3>
-                        <p className="text-sm opacity-90 leading-relaxed">{tipoCarta.description}</p>
+                        <h3 className="font-bold text-xl mb-3">{servicos.nome}</h3>
+                        <p className="text-sm opacity-90 leading-relaxed">{servicos.description}</p>
                     </button>
                 ))}
             </div>
@@ -66,7 +90,7 @@ const LetterType: React.FC<LetterTypeProps> = ({
                             ? 'bg-gradient-to-r from-[#0d7ac9] to-[#0a6ab0] hover:from-[#0a6ab0] hover:to-[#0d7ac9] text-white shadow-lg hover:shadow-xl transform hover:scale-105'
                             : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
-                    onClick={onNext}
+                    onClick={handleNext}
                     disabled={!selectedLetterType}
                 >
                     Finalizar <ChevronRightIcon className="w-5 h-5 ml-2" />
