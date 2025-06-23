@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/24/solid';
-import { createCarta } from '../services/api';
+import { createCarta, CustomError } from '../services/api';
 import { toast } from 'react-toastify';
-import { CustomError } from '../services/api';
 import { IMaskInput } from 'react-imask';
 
 interface Banco {

@@ -1,7 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
 // Definição da interface para o erro personalizado
-interface CustomError extends Error {
+export interface CustomError extends Error {
     campos?: { campo: string; mensagem: string }[]; // Alinha com a estrutura de ErrorField
 }
 
@@ -114,7 +114,7 @@ export async function createCarta(data: {
         tipoCnabId: number;
         gerente: { nome: string; telefone: string; email: string };
     };
-    produtoId: number;
+    produtoId: string;
 }): Promise<any> {
     // Limpa os campos antes do envio
     const payload = {

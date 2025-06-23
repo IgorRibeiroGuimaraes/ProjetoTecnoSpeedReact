@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchBanco, fetchServicos } from '../services/api';
 import { Toast } from '../lib/toast';
 import StepHeader from './StepHeader';
@@ -238,7 +238,6 @@ const HomePage = () => {
                 selectedBank={selectedBank}
                 selectedProduct={selectedProduct}
                 isStepComplete={isStepComplete}
-                goToStep={goToStep}
             />
             <div className="flex mx-auto">
                 <ProgressSidebar
@@ -296,7 +295,6 @@ const HomePage = () => {
                     {activeStep === 5 && (
                         <PdfView
                             onLetterTypeSelect={handleLetterTypeSelect}
-                            onNext={nextStep}
                             onPrev={prevStep}
                             pdfUrl={pdfUrl}
                         />

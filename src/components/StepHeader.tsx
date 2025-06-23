@@ -1,6 +1,6 @@
 // StepHeader.tsx
 import React from 'react';
-import { CheckIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { CheckIcon } from '@heroicons/react/24/solid';
 
 interface Step {
     id: number;
@@ -14,7 +14,6 @@ interface StepHeaderProps {
     selectedBank: string;
     selectedProduct: string;
     isStepComplete: (step: number) => boolean;
-    goToStep: (step: number) => void;
 }
 
 const StepHeader: React.FC<StepHeaderProps> = ({
@@ -23,7 +22,6 @@ const StepHeader: React.FC<StepHeaderProps> = ({
     selectedBank,
     selectedProduct,
     isStepComplete,
-    goToStep,
 }) => {
     return (
         <div className="bg-gradient-to-r shadow-lg mb-2 rounded-xl">
@@ -35,14 +33,13 @@ const StepHeader: React.FC<StepHeaderProps> = ({
                             <div className="flex flex-col items-center">
                                 {/* Círculo da etapa */}
                                 <div
-                                    className={`relative cursor-pointer transition-all duration-300 ${
+                                    className={`relative transition-all duration-300 ${
                                         step.id === 1 ||
                                         (step.id === 2 && selectedBank) ||
                                         (step.id === 3 && selectedBank && selectedProduct)
-                                            ? 'cursor-pointer hover:scale-110'
-                                            : 'cursor-not-allowed opacity-60'
+                                            ? 'hover:scale-110'
+                                            : 'opacity-60'
                                     }`}
-                                    onClick={() => goToStep(step.id)}
                                 >
                                     <div
                                         className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
