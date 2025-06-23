@@ -33,6 +33,7 @@ const LetterType: React.FC<LetterTypeProps> = ({
     const handleNext = async () => {
         if (selectedLetterType) {
             setLoading(true);
+            Toast.info('Carta está sendo gerada...');
             try {
                 const response = await generatePdf(cartaId, selectedLetterType);
                 setPdfUrl(response.pdfUrl);
@@ -46,6 +47,7 @@ const LetterType: React.FC<LetterTypeProps> = ({
             }
         }
     };
+
     return (
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
             <div className="flex items-center mb-8">
@@ -61,39 +63,58 @@ const LetterType: React.FC<LetterTypeProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-9 mb-8">
-                {servicos.map((servicos) => (
+                {servicos.map((servico) => (
                     <button
-                        key={servicos.id}
-                        className={`p-6 rounded-2xl border-2 transition-all duration-300 text-left ${
-                            selectedLetterType === servicos.id.toString()
+                        key={servico.id}
+                        className={`p-6 rounded-2xl border-2 transition-all duration-300 text-left ${selectedLetterType === servico.id.toString()
                                 ? 'border-[#0d7ac9] bg-gradient-to-br from-[#0d7ac9] to-[#0a6ab0] text-white shadow-xl transform scale-105'
                                 : 'border-gray-200 bg-white hover:border-[#0d7ac9] hover:shadow-md cursor-pointer'
-                        }`}
-                        onClick={() => onLetterTypeSelect(servicos.id.toString())}
+                            } ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
+                        onClick={() => !loading && onLetterTypeSelect(servico.id.toString())}
+                        disabled={loading}
                     >
-                        <h3 className="font-bold text-xl mb-3">{servicos.nome}</h3>
-                        <p className="text-sm opacity-90 leading-relaxed">{servicos.description}</p>
+                        <h3 className="font-bold text-xl mb-3">{servico.nome}</h3>
+                        <p className="text-sm opacity-90 leading-relaxed">{servico.description}</p>
                     </button>
                 ))}
             </div>
 
             <div className="flex justify-between">
                 <button
-                    className="cursor-pointer px-8 py-4 border-2 border-[#0d7ac9] text-[#0d7ac9] rounded-xl font-semibold hover:bg-[#0d7ac9] hover:text-white transition-all duration-300"
+                    className={`cursor-pointer px-8 py-4 border-2 border-[#0d7ac9] text-[#0d7ac9] rounded-xl font-semibold transition-all duration-300 ${loading
+                            ? 'cursor-not-allowed opacity-50'
+                            : 'hover:bg-[#0d7ac9] hover:text-white'
+                        }`}
                     onClick={onPrev}
+                    disabled={loading}
                 >
                     Voltar
                 </button>
                 <button
-                    className={`cursor-pointer px-8 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center ${
-                        selectedLetterType
-                            ? 'bg-gradient-to-r from-[#0d7ac9] to-[#0a6ab0] hover:from-[#0a6ab0] hover:to-[#0d7ac9] text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                    className={`cursor-pointer px-8 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center ${selectedLetterType && !loading
+                            ? 'bg-gradient-to-r from-[#0d7ac9] to-[#0a6ab0] hover:from-[#0a6ab0] hover:to-[#0d7ac9] text-white shadow-lg hover:shadow-xl'
+                            : 'bg-gray-300 text-gray-200 cursor-not-allowed'
+                        }`}
                     onClick={handleNext}
-                    disabled={!selectedLetterType}
+                    disabled={!selectedLetterType || loading}
                 >
-                    Finalizar <ChevronRightIcon className="w-5 h-5 ml-2" />
+                    {loading ? (
+                        <span className="flex items-center">
+                            <svg className="animate-spin h-5 w-5 mr-2 text-white" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path
+                                    fill="currentColor"
+                                    fillOpacity="0.75"
+                                    d="M4 12a8 8 0 018-8V4a4 4 0 00-4 4h4"
+                                />
+                            </svg>
+                            Gerando...
+                        </span>
+                    ) : (
+                        <>
+                            Finalizar <ChevronRightIcon className="w-5 h-5 ml-2" />
+                        </>
+                    )}
                 </button>
             </div>
         </div>

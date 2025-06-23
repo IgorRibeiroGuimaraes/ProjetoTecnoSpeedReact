@@ -17,7 +17,6 @@ export async function login(cnpj: string, senha: string) {
     });
 
     if (!response.ok) {
-        const errorData = await response.json(); // <-- Pega a mensagem de erro do servidor
         const message = 'Erro ao autenticar. Verifique suas credenciais.';
         throw new Error(message);
     }
@@ -31,7 +30,6 @@ export async function logout() {
         credentials: 'include', // Inclui cookies na requisição
     });
     if (!response.ok) {
-        const errorData = await response.json();
         const message = 'Erro ao deslogar. Tente novamente.';
         throw new Error(message);
     }
@@ -67,7 +65,7 @@ export async function checkAuth() {
     };
 }
 
-export async function fetchBanco(endpoint: string): Promise<any> {
+export async function fetchBanco(): Promise<any> {
     try {
         const response = await fetch(`${API_URL}/bancos-configuracoes`, {
             method: 'GET',

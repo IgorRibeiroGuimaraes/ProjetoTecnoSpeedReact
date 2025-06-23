@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
+import { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { useLocation } from 'react-router-dom'; // Adicione useLocation
 import { login as apiLogin, checkAuth, logout as apiLogout } from '../services/api';
 

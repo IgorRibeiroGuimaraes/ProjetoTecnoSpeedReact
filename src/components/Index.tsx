@@ -30,12 +30,6 @@ interface Step {
     subtitle: string;
 }
 
-interface TipoCarta {
-    id: number;
-    nome: string;
-    description: string;
-}
-
 interface FormDataValues {
     emitente: {
         cnpj: string;
@@ -129,7 +123,7 @@ const HomePage = () => {
         setLoading(true);
         setError(null);
         try {
-            const bancosData = await fetchBanco('/bancos-configuracoes');
+            const bancosData = await fetchBanco();
             console.log('Bancos fetched:', bancosData);
             setBancos(bancosData);
         } catch (error) {
@@ -229,6 +223,18 @@ const HomePage = () => {
     const handleFormDataChange = (data: FormDataValues) => {
         setFormData(data);
     };
+
+    // No início do componente, adicione um loading geral
+    if (loading && bancos.length === 0) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Carregando dados...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-50">
