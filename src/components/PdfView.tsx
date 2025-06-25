@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { ChevronRightIcon } from '@heroicons/react/24/solid';
+import { sendLetter } from '../services/api';
 import { Toast } from '../lib/toast';
 
 interface PdfViewProps {
     onLetterTypeSelect: (letterTypeId: string) => void;
     onPrev: () => void;
     pdfUrl: string;
+    cartaId: number;
+    goToStep: (step: number) => void;
 }
 
 const PdfView: React.FC<PdfViewProps> = ({
     onPrev,
     pdfUrl,
+    cartaId,
+    goToStep,
 }) => {
     const [pdfError, setPdfError] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -27,13 +32,34 @@ const PdfView: React.FC<PdfViewProps> = ({
         setLoading(false);
     };
 
-    const handleFinalize = () => {
-        setShowModal(true);
-    };
-
     const handleCloseModal = () => {
         setShowModal(false);
+        goToStep(1);
     };
+
+    const handleCloseModalClickOff = () => {
+        setShowModal(false);
+    };
+
+    const handleSendLetter = async () => {
+        Toast.info('Aguarde, enviando carta...');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        try {
+            const response = await sendLetter(cartaId);
+            if (response.status === 200) {
+                Toast.success('Carta enviada com sucesso!');
+                setShowModal(false);
+            } else {
+                Toast.error('Erro ao enviar a carta. Tente novamente.');
+            }
+        } catch (error) {
+            console.error('Erro ao enviar a carta:', error);
+            Toast.error('Erro ao enviar a carta. Tente novamente.');
+        } finally {
+            setLoading(false);
+            setShowModal(true);
+        }
+    }
 
     return (
         <>
@@ -148,7 +174,7 @@ const PdfView: React.FC<PdfViewProps> = ({
                     </button>
                     <button
                         className="cursor-pointer px-8 py-4 rounded-xl font-semibold transition-all duration-300 flex items-center bg-gradient-to-r from-[#0d7ac9] to-[#0a6ab0] hover:from-[#0a6ab0] hover:to-[#0d7ac9] text-white shadow-lg hover:shadow-xl transform hover:scale-105"
-                        onClick={handleFinalize}
+                        onClick={handleSendLetter}
                     >
                         Finalizar <ChevronRightIcon className="w-5 h-5 ml-2" />
                     </button>
@@ -159,7 +185,7 @@ const PdfView: React.FC<PdfViewProps> = ({
             {showModal && (
                 <div
                     className="fixed inset-0 flex items-center justify-center z-50 p-4"
-                    onClick={handleCloseModal} // Fecha ao clicar fora
+                    onClick={handleCloseModalClickOff} // Fecha ao clicar fora
                 >
                     {/* Modal container que impede propagação do clique */}
                     <div
@@ -182,13 +208,13 @@ const PdfView: React.FC<PdfViewProps> = ({
                                     <div className="flex gap-4">
                                         <button
                                             onClick={handleCloseModal}
-                                            className="bg-white text-[#1e40af] font-semibold px-6 py-2 rounded-md hover:bg-gray-100 transition"
+                                            className="bg-white text-[#1e40af] font-semibold px-6 py-2 rounded-md cursor-pointer hover:bg-gray-100 transition"
                                         >
                                             INÍCIO
                                         </button>
-                                        <button className="border border-white text-white font-semibold px-6 py-2 rounded-md hover:bg-white hover:text-[#1e40af] transition">
+                                        <a href='https://clientes-novo.tecnospeed.com.br/' className="border cursor-pointer border-white text-white font-semibold px-6 py-2 rounded-md hover:bg-white hover:text-[#1e40af] transition">
                                             SITE
-                                        </button>
+                                        </a>
                                     </div>
                                 </div>
 

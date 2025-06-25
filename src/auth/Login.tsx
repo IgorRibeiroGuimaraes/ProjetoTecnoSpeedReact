@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify'; // Substituí Toast por react-toastify
+import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import { IMaskInput } from 'react-imask';
 
@@ -9,6 +9,7 @@ const Login = () => {
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
   const [erroLogin, setErroLogin] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -18,6 +19,7 @@ const Login = () => {
     try {
       const cnpjSemMascara = cnpj.replace(/[^\d]/g, '');
       await login(cnpjSemMascara, senha);
+      localStorage.setItem('cnpj', cnpjSemMascara);
       toast.success('Login realizado com sucesso!');
       await new Promise(resolve => setTimeout(resolve, 1000));
       navigate('/');
@@ -29,6 +31,10 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
   };
 
   return (
@@ -98,18 +104,48 @@ const Login = () => {
             <div className="space-y-2">
               <label className="text-white/90 text-sm font-medium flex items-center">
                 <svg className="w-4 h-4 mr-2 opacity-70" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M5 9V7A5 5 0 0110 2a5 5 0 015 5v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                 </svg>
                 Token de Acesso
               </label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   className="w-full px-4 py-4 bg-white/5 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/40 transition-all duration-300"
                   placeholder="Digite seu token"
+                  maxLength={30}
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute cursor-pointer right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/80 transition-colors duration-200"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    {showPassword ? (
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.418 0-8-3.582-8-8s3.582-8 8-8a10.05 10.05 0 011.875.175M12 5v.01M9 12h6m-7.757-4.243a6 6 0 007.514 7.514"
+                      />
+                    ) : (
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm6 0c0 4.418-4.03 8-9 8s-9-3.582-9-8 4.03-8 9-8 9 3.582 9 8z"
+                      />
+                    )}
+                  </svg>
+                </button>
                 <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
               </div>
             </div>

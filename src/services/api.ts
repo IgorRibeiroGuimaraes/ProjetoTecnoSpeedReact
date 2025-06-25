@@ -67,7 +67,7 @@ export async function checkAuth() {
 
 export async function fetchBanco(): Promise<any> {
     try {
-        const response = await fetch(`${API_URL}/bancos-configuracoes`, {
+        const response = await fetch(`${API_URL}/banks-settings`, {
             method: 'GET',
             credentials: 'include',
         });
@@ -83,9 +83,32 @@ export async function fetchBanco(): Promise<any> {
     }
 }
 
+export async function fetchCartas(cnpj: string): Promise<any> {
+    try {
+        const params = new URLSearchParams({ cnpj });
+
+        const response = await fetch(`${API_URL}/list-letter?${params.toString()}`, {
+            method: 'GET',
+            credentials: 'include',
+        });
+
+        console.log('Fetching cartas for CNPJ:', response);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Fetch error:', error);
+        throw error;
+    }
+}
+
+
 export async function fetchServicos(): Promise<any> {
     try {
-        const response = await fetch(`${API_URL}/servicos`, {
+        const response = await fetch(`${API_URL}/services`, {
             method: 'GET',
             credentials: 'include',
         });
@@ -102,15 +125,19 @@ export async function fetchServicos(): Promise<any> {
 export async function createCarta(data: {
     emitente: { cnpj: string; razaoSocial: string };
     responsavel: { nome: string; cargo: string; telefone: string; email: string };
+    responsavelTecnoSpeed: {  respTecno: string; emailTecno: string;};
     banco: {
         bancoId: number;
         agencia: string;
         agenciaDV: string;
         conta: number;
         contaDV: number;
+        cidadebanco: string;
+        ufBanco: string;
         convenio: string;
         tipoCnabId: number;
         gerente: { nome: string; telefone: string; email: string };
+        preferenciaContato: string;
     };
     produtoId: string;
 }): Promise<any> {
@@ -125,6 +152,9 @@ export async function createCarta(data: {
             ...data.responsavel,
             telefone: limparMascara(data.responsavel.telefone),
         },
+        responsavelTecnoSpeed: {
+            ...data.responsavelTecnoSpeed,
+        },
         banco: {
             ...data.banco,
             gerente: {
@@ -136,7 +166,7 @@ export async function createCarta(data: {
     console.log('Creating Carta with data:', payload);
 
     try {
-        const response = await fetch(`${API_URL}/carta-van`, {
+        const response = await fetch(`${API_URL}/letter-van`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -148,8 +178,7 @@ export async function createCarta(data: {
         console.log('Status da resposta:', response.status);
         if (!response.ok) {
             const errorData = await response.json();
-            console.log('Erro do backend:', errorData);
-            const error = new Error(errorData.message || 'Erro ao criar carta.') as CustomError;
+            const error = new Error(errorData.message && errorData.detalhe || 'Erro ao criar carta.') as CustomError;
             error.campos = errorData.campos;
             throw error;
         }
@@ -173,7 +202,7 @@ export async function generatePdf(cartaId: number, servicoId: string): Promise<a
             servicoId: Number(servicoId), // Certifique-se de que o servicoId é um número
         };
 
-        const response = await fetch(`${API_URL}/cartas/generatepdf`, {
+        const response = await fetch(`${API_URL}/letter/generatepdf`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -183,12 +212,35 @@ export async function generatePdf(cartaId: number, servicoId: string): Promise<a
         });
 
         if (!response.ok) {
-            throw new Error(`Erro ao gerar PDF. Status: ${response.status}`);
+            throw new Error(`Erro ao gerar PDF. Status: ${response.status && response.statusText}`);
         }
 
         return await response.json();
     } catch (error) {
         console.error('Generate PDF error:', error);
+        throw error;
+    }
+}
+
+export async function sendLetter(cartaId:number): Promise<any> {
+    try {
+        console.log('Enviando carta com ID:', cartaId);
+        const response = await fetch(`${API_URL}/letter/van/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ cartaId }),
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erro ao enviar carta. Status: ${response.status}`);
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Send Letter error:', error);
         throw error;
     }
 }

@@ -1,4 +1,3 @@
-// ProgressSidebar.tsx
 import React from 'react';
 import { CheckIcon } from '@heroicons/react/24/solid';
 
@@ -29,6 +28,11 @@ interface ProgressSidebarProps {
     selectedProduct: string;
     bancos: Banco[];
     produtos: Produto[];
+    formData: {
+        banco: {
+            cnab: string;
+        };
+    };
     isStepComplete: (step: number) => boolean;
     goToStep: (step: number) => void;
 }
@@ -40,6 +44,7 @@ const ProgressSidebar: React.FC<ProgressSidebarProps> = ({
     selectedProduct,
     bancos,
     produtos,
+    formData,
     isStepComplete,
     goToStep,
 }) => {
@@ -107,6 +112,14 @@ const ProgressSidebar: React.FC<ProgressSidebarProps> = ({
                                 {selectedProduct
                                     ? produtos.find((p) => p.id.toString() === selectedProduct)?.label
                                     : 'Não selecionado'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-600 font-medium">CNAB:</span>
+                            <span
+                                className={`font-semibold ${formData.banco.cnab ? 'text-green-600' : 'text-gray-400'}`}
+                            >
+                                {formData.banco.cnab || 'Não selecionado'}
                             </span>
                         </div>
                     </div>

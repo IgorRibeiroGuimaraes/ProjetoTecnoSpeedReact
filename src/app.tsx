@@ -3,6 +3,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Index from './components/Index';
 import Login from './auth/Login';
+import LetterList from './components/LetterList';
 import Navbar from './components/Navbar'; 
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -21,6 +22,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<Index />} />
+          <Route path="/cartas-enviadas" element={<LetterList />} />
         </Route>
       </Routes>
 

@@ -21,6 +21,7 @@ const Navbar = () => {
     const handleLogout = () => {
         try {
             logout();
+            localStorage.removeItem('cnpj');
             console.log('Usuário deslogado com sucesso');
         } catch (error) {
             console.error('Erro ao deslogar:', error);
@@ -28,24 +29,23 @@ const Navbar = () => {
         } finally {
             navigate('/login');
         }
-
     };
 
     const handleAccessCards = () => {
-        // Aqui você pode adicionar a lógica para acessar as cartas
-        console.log('Acessando cartas enviadas');
-        // Exemplo: navigate('/cartas');
+        navigate('/cartas-enviadas');
     };
 
     return (
         <header className="bg-[#0d58c9] text-white p-4 shadow-md">
             <div className="flex justify-between items-center">
                 {/* Logo com efeito hover sutil */}
-                <img
-                    src="/assets/images/Logo.png"
-                    alt="Logo"
-                    className="h-12 hover:scale-105 transition-transform duration-200"
-                />
+                <a href="/">
+                    <img
+                        src="/assets/images/Logo.png"
+                        alt="Logo"
+                        className="h-12 hover:scale-105 transition-transform duration-200"
+                    />
+                </a>
 
                 {/* Menu do usuário */}
                 <div className="relative">

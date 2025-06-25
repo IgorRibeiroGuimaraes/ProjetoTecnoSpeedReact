@@ -41,11 +41,17 @@ interface FormDataValues {
         telefone: string;
         email: string;
     };
+    responsavelTecnoSpeed: {
+        respTecno: string;
+        emailTecno: string;
+    };
     banco: {
         agencia: string;
         agenciaDV: string;
         conta: number; // Consistente com DataFormStep
         contaDV: number; // Consistente com DataFormStep
+        cidadebanco: string; // Adicionado para compatibilidade com DataFormStep
+        ufBanco: string; // Opcional, pode ser usado se necessário
         convenio: string;
         cnab: string;
         gerente: {
@@ -53,6 +59,7 @@ interface FormDataValues {
             telefone: string;
             email: string;
         };
+        preferenciaContato: string;
     };
 }
 
@@ -79,11 +86,17 @@ const HomePage = () => {
             telefone: '',
             email: '',
         },
+        responsavelTecnoSpeed: {
+            respTecno: '',
+            emailTecno: '',
+        },
         banco: {
             agencia: '',
             agenciaDV: '',
             conta: 0,
             contaDV: 0,
+            cidadebanco: '', // Adicionado para compatibilidade com DataFormStep
+            ufBanco: '', // Opcional, pode ser usado se necessário
             convenio: '',
             cnab: '',
             gerente: {
@@ -91,6 +104,7 @@ const HomePage = () => {
                 telefone: '',
                 email: '',
             },
+            preferenciaContato: '',
         },
     });
 
@@ -166,14 +180,18 @@ const HomePage = () => {
                 setFormData({
                     emitente: { cnpj: '', razaoSocial: '' },
                     responsavel: { nome: '', cargo: '', telefone: '', email: '' },
+                    responsavelTecnoSpeed: { respTecno: '', emailTecno: '' },
                     banco: {
                         agencia: '',
                         agenciaDV: '',
                         conta: 0,
                         contaDV: 0,
+                        cidadebanco: '', // Adicionado para compatibilidade com DataFormStep
+                        ufBanco: '', // Opcional, pode ser usado se necessário
                         convenio: '',
                         cnab: '',
                         gerente: { nome: '', telefone: '', email: '' },
+                        preferenciaContato: '',
                     },
                 });
                 setIsDataFormValid(false);
@@ -186,11 +204,67 @@ const HomePage = () => {
     };
 
     const goToStep = (step: number) => {
-        if (step === 1) setActiveStep(1);
-        else if (step === 2 && selectedBank) setActiveStep(2);
-        else if (step === 3 && selectedBank && selectedProduct && isDataFormValid) setActiveStep(3);
-        else if (step === 4 && selectedBank && selectedProduct && isDataFormValid) setActiveStep(4);
-        else if (step === 5 && selectedBank && selectedProduct && isDataFormValid && selectedLetterType) setActiveStep(5);
+        if (step === 1) {
+            setActiveStep(1);
+            setSelectedBank('');
+            setSelectedProduct('');
+            setSelectedLetterType('');
+            setIsDataFormValid(false);
+            setCartaId(0);
+            setPdfUrl('');
+            setFormData({
+                emitente: { cnpj: '', razaoSocial: '' },
+                responsavel: { nome: '', cargo: '', telefone: '', email: '' },
+                responsavelTecnoSpeed: { respTecno: '', emailTecno: '' },
+                banco: {
+                    agencia: '',
+                    agenciaDV: '',
+                    conta: 0,
+                    contaDV: 0,
+                    cidadebanco: '', // Adicionado para compatibilidade com DataFormStep
+                    ufBanco: '', // Opcional, pode ser usado se necessário
+                    convenio: '',
+                    cnab: '',
+                    gerente: { nome: '', telefone: '', email: '' },
+                    preferenciaContato: '',
+                },
+            });
+        } else if (step === 2 && selectedBank) {
+            setActiveStep(2);
+            setSelectedProduct('');
+            setSelectedLetterType('');
+            setIsDataFormValid(false);
+            setCartaId(0);
+            setPdfUrl('');
+            setFormData({
+                emitente: { cnpj: '', razaoSocial: '' },
+                responsavel: { nome: '', cargo: '', telefone: '', email: '' },
+                responsavelTecnoSpeed: { respTecno: '', emailTecno: '' },
+                banco: {
+                    agencia: '',
+                    agenciaDV: '',
+                    conta: 0,
+                    contaDV: 0,
+                    cidadebanco: '',
+                    ufBanco: '',
+                    convenio: '',
+                    cnab: '',
+                    gerente: { nome: '', telefone: '', email: '' },
+                    preferenciaContato: '',
+                },
+            });
+        } else if (step === 3 && selectedBank && selectedProduct) {
+            setActiveStep(3);
+            setSelectedLetterType('');
+            setCartaId(0);
+            setPdfUrl('');
+        } else if (step === 4 && selectedBank && selectedProduct && isDataFormValid) {
+            setActiveStep(4);
+            setCartaId(0);
+            setPdfUrl('');
+        } else if (step === 5 && selectedBank && selectedProduct && isDataFormValid && selectedLetterType) {
+            setActiveStep(5);
+        }
     };
 
     const isStepComplete = (step: number) => {
@@ -255,6 +329,7 @@ const HomePage = () => {
                     produtos={produtos}
                     isStepComplete={isStepComplete}
                     goToStep={goToStep}
+                    formData={formData}
                 />
                 <div className="flex-1 ml-1">
                     {activeStep === 1 && (
@@ -302,7 +377,9 @@ const HomePage = () => {
                         <PdfView
                             onLetterTypeSelect={handleLetterTypeSelect}
                             onPrev={prevStep}
+                            cartaId={cartaId}
                             pdfUrl={pdfUrl}
+                            goToStep={goToStep}
                         />
                     )}
                 </div>
